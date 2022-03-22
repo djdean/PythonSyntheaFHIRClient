@@ -6,7 +6,6 @@ local_output_path=$4
 log_path=$5		
 container_name=$6		
 
-git clone https://github.com/jbinko/PythonSyntheaFHIRClient.git
 cd ./PythonSyntheaFHIRClient/python_client
 
 echo "Writing config file..."

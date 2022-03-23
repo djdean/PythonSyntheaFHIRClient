@@ -2,8 +2,10 @@
 #####Clone the git repo#############
 git clone https://github.com/djdean/PythonSyntheaFHIRClient.git
 #####Run the environment setup script##########
+chmod 700 ./PythonSyntheaFHIRClient/deployment/scripts/setup_environment.sh
 ./PythonSyntheaFHIRClient/deployment/scripts/setup_environment.sh
 #####Build and install Synthea###########
+chmod 700 ./PythonSyntheaFHIRClient/deployment/scripts/install_synthea.sh
 ./PythonSyntheaFHIRClient/deployment/scripts/install_synthea.sh
 #####Build and install the python deamon##########
 connection_string=$1		#Azure Storage account connection string to upload the data to 
@@ -12,5 +14,6 @@ FHIR_output_path=$3		#The local directory to check for FHIR bundles
 local_output_path=$4		#The local path to move uploaded FHIR data to after being stored in Azure
 log_path=$5			#The path to send the log file to
 container_name=$6		#The container name to upload the data to in the Azure Storage account
-./PythonSyntheaFHIRClient/deployment/scripts/install_python_client.sh $connection_string $polling_interval $FHIR_output_path $local_output_path $log_path $container_name
-
+chmod 700 ./PythonSyntheaFHIRClient/deployment/scripts/install_python_daemon.sh
+./PythonSyntheaFHIRClient/deployment/scripts/install_python_daemon.sh $connection_string $polling_interval $FHIR_output_path $local_output_path $log_path $container_name
+echo "Done!"

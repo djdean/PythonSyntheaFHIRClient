@@ -1,4 +1,8 @@
 #/bin/bash
+#####Create Home Dir#############
+mkdir /home/synthea
+sudo chmod 744 /home/synthea/
+cd /home/synthea
 #####Clone the git repo#############
 git clone https://github.com/djdean/PythonSyntheaFHIRClient.git
 #####Run the environment setup script##########

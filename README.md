@@ -1,4 +1,3 @@
-# PythonSyntheaFHIRClient
 # Installation Guide
 An overview of the soltuion is below:<br /><br />
 # SCREENSHOT GOES HERE 

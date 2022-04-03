@@ -4,6 +4,6 @@ sudo apt update -y
 sudo apt upgrade -y
 sudo apt install python3-pip -y
 
-sudo apt install openjdk-17-jre-headless -y
+sudo apt install default-jdk -y
 
 sudo pip3 install azure-storage-blob

@@ -21,4 +21,4 @@ content_string+=$(printf '%s' $'\t'"\"container_name\":\"$container_name\"")$'\n
 content_string+="}"
 
 
-echo "$content_string" > ./deploy_config.json
+echo "$content_string" > deploy_config.json

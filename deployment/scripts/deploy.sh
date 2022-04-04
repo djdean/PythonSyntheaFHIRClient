@@ -20,4 +20,5 @@ log_path=$5			#The path to send the log file to
 container_name=$6		#The container name to upload the data to in the Azure Storage account
 chmod 700 ./PythonSyntheaFHIRClient/deployment/scripts/install_python_daemon.sh
 sudo ./PythonSyntheaFHIRClient/deployment/scripts/install_python_daemon.sh $connection_string $polling_interval $FHIR_output_path $local_output_path $log_path $container_name
+sudo mv ./PythonSyntheaFHIRClient/deployment/scripts/deploy_config.json ./PythonSyntheaFHIRClient/python_client/deploy_config.json
 echo "Done!"

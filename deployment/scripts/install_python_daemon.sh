@@ -9,16 +9,16 @@ container_name=$6		#The container name to upload the data to in the Azure Storag
 ###Write the config file for the deamon###
 echo "Writing config file..."
 
-content_string="{"$'\n' \
-\
-content_string+=$(printf '%s' $'\t'"\"connection_string\":\"$connection_string\"",)$'\n' \
-content_string+=$(printf '%s' $'\t'"\"polling_interval\":\"$polling_interval\"",)$'\n' \
-content_string+=$(printf '%s' $'\t'"\"FHIR_output_path\":\"$FHIR_output_path\"",)$'\n' \
-content_string+=$(printf '%s' $'\t'"\"local_output_path\":\"$local_output_path\"",)$'\n' \
-content_string+=$(printf '%s' $'\t'"\"log_path\":\"$log_path\"",)$'\n' \
-content_string+=$(printf '%s' $'\t'"\"container_name\":\"$container_name\"")$'\n' \
- \
+content_string="{"$'\n'
+
+content_string+=$(printf '%s' $'\t'"\"connection_string\":\"$connection_string\"",)$'\n'
+content_string+=$(printf '%s' $'\t'"\"polling_interval\":\"$polling_interval\"",)$'\n'
+content_string+=$(printf '%s' $'\t'"\"FHIR_output_path\":\"$FHIR_output_path\"",)$'\n'
+content_string+=$(printf '%s' $'\t'"\"local_output_path\":\"$local_output_path\"",)$'\n'
+content_string+=$(printf '%s' $'\t'"\"log_path\":\"$log_path\"",)$'\n'
+content_string+=$(printf '%s' $'\t'"\"container_name\":\"$container_name\"")$'\n'
+
 content_string+="}"
 
 
-echo "$content_string" > ./PythonSyntheaFHIRClient/python_client/deploy_config.json
+echo "$content_string" > ./PythonSyntheaFHIRClient/deployment/scripts/deploy_config.json

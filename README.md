@@ -2,16 +2,24 @@
 An overview of the soltuion is below. There are two ways to install and configure the application: automated or manual. Only Ubuntu 20.04 is supported at this time.
 # Automated Configuration and Deployment
 
-
 1) Go to the Azure Portal <https://portal.azure.com/>, and click Azure Cloud Shell (First Icon next to the search box on the top).
 If this is the first time you are using Azure Cloud Shell you might be asked to configure storage for this. Follow the configuration wizard.
 2) **Clone the repository:** Next step is to clone this repository using the following command: `git clone https://github.com/djdean/PythonSyntheaFHIRClient.git`
 3) `cd ./PythonSyntheaFHIRClient/IaC/`
-4) Last step is to provision Infrastructure through the Bicep template. Provisioning needs to be initiated through the commands:
+4) Last step is to provision Infrastructure through the Bicep template. Provisioning needs to be initiated through the following commands.
+
+The very first step is to create Service Account / Service Principal Name (SPN) for the application with the least privilege approach. You can specify 'Contributor' role at the resource group level but recommendation is to specify even lower permissions as needed.
 
 ```
 az group create --name MyResourceGroupName --location MyLocation --subscription MySubscriptionId
 
+az ad sp create-for-rbac --name MySPNName --role 'Contributor' --scopes /subscriptions/MySubscriptionId/resourceGroups/MyResourceGroupName --years 1 --subscription MySubscriptionId
+```
+
+After creation, you need to collect the information about SPN and credentials. You can see secret value as the output of the command. Copy and note the secret. You also need ClientId and ObjectId. For that, search in Azure Portal in search box 'Azure Active Directory', select it, click 'App Registrations', 'Owned Applications', search for the name of application you just created, click the application and click through the 'Managed application in local directory'.
+Copy and note the value for the 'Application ID' (ClientID) and the ObjectId item for later use.
+
+```
 az deployment group create --resource-group MyResourceGroupName --template-file Synthea.bicep --parameters projectPrefix=specifyPrefix sqlServerLogin=specifySqlLogin sqlServerPassword=specifySqlPwd localAdminUserName='specifyVMLogin' localAdminPassword='specifyVMPwd' clientId='specifyClientId' objectId='specifyObjectId' clientSecret='specifyClientSecret' --subscription MySubscriptionId
 ```
 

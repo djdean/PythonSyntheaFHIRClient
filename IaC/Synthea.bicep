@@ -23,6 +23,19 @@ param localAdminUserName string
 @description('Specifies the Administrator password for VM.')
 param localAdminPassword string
 
+@minLength(32)
+@description('Specifies the SPN ClientId.')
+param clientId string
+
+@minLength(32)
+@description('Specifies the SPN ObjectId.')
+param objectId string
+
+@minLength(12)
+@secure()
+@description('Specifies the SPN password.')
+param clientSecret string
+
 // Optional Parameter
 @description('Target region/location for deployment of resources.')
 param location string = resourceGroup().location
@@ -62,11 +75,13 @@ var laUniqueName = '${lowerProjectPrefix}-synthea-la'
 var appInsightsUniqueName = '${lowerProjectPrefix}-synthea-appins'
 var appSvcPlanUniqueName = '${lowerProjectPrefix}-synthea-appplan'
 var appSvcFunctionUniqueName = '${lowerProjectPrefix}-synthea-appfce01'
+var appSvcFunctionUniqueName2 = '${lowerProjectPrefix}-synthea-appfce02'
 
 var synapseUniqueName = '${lowerProjectPrefix}synthea'
 
 var saLakeUniqueName = '${lowerProjectPrefix}synthealakesa'
 var saLakeContainerName = 'workspace'
+var saUniqueName = '${lowerProjectPrefix}syntheasa'
 
 var vmName = '${lowerProjectPrefix}syntheavm'
 var vmSize = 'Standard_D2_v3'
@@ -74,7 +89,6 @@ var vmPIPName = '${lowerProjectPrefix}syntheavmpip'
 
 var healthcareWksUniqueName = '${lowerProjectPrefix}syntheahcapi'
 var fhirName = '${lowerProjectPrefix}fhir'
-var fhirservicename = '${healthcareWksUniqueName}/${fhirName}'
 var loginURL = environment().authentication.loginEndpoint
 var authority = '${loginURL}${tenant().tenantId}'
 var audience = 'https://${healthcareWksUniqueName}-${fhirName}.fhir.azurehealthcareapis.com'
@@ -436,7 +450,7 @@ resource synapseWorkspace_dev_privateLink 'Microsoft.Network/privateEndpoints@20
   }
 }
 
-resource synapseWorkspace__dev_privateLink_zoneGroup 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@2020-08-01' = if (enable_private_endpoints) {
+resource synapseWorkspace_dev_privateLink_zoneGroup 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@2020-08-01' = if (enable_private_endpoints) {
   name: '${synapseWorkspace_dev_privateLink.name}/private-link'
   properties: {
     privateDnsZoneConfigs: [
@@ -465,35 +479,6 @@ resource synapseWorkspace_FirewallAllowAll 'Microsoft.Synapse/workspaces/firewal
   properties: {
     startIpAddress: '0.0.0.0'
     endIpAddress: '255.255.255.255'
-  }
-}
-
-// ----- HEALTHCARE WORKSPACES
-
-resource healthcareWorkspace 'Microsoft.HealthcareApis/workspaces@2021-06-01-preview' = {
-  name: healthcareWksUniqueName
-  location: location
-  tags: resourceTags
-}
-
-resource healthcareWorkspace_FHIR 'Microsoft.HealthcareApis/workspaces/fhirservices@2021-06-01-preview' = {
-  dependsOn: [
-    healthcareWorkspace
-  ]
-  name: fhirservicename
-  location: location
-  tags: resourceTags
-  kind: 'fhir-R4'
-  identity: {
-    type: 'SystemAssigned'
-  }
-  properties: {
-    accessPolicies: []
-    authenticationConfiguration: {
-      authority: authority
-      audience: audience
-      smartProxyEnabled: true
-    }
   }
 }
 
@@ -534,6 +519,9 @@ resource appSvcPlan 'Microsoft.Web/serverfarms@2021-03-01' = {
 }
 
 resource appSvc_functionApp 'Microsoft.Web/sites@2021-01-01' = {
+  dependsOn:[
+    appSvcPlan
+  ]
   name: appSvcFunctionUniqueName
   kind: 'functionapp'
   location: location
@@ -551,11 +539,15 @@ resource appSvc_functionApp 'Microsoft.Web/sites@2021-01-01' = {
       appSettings: [
         {
           name: 'FUNCTIONS_EXTENSION_VERSION'
-          value: '~3'
+          value: '~2'
         }
         {
           name: 'FUNCTIONS_WORKER_RUNTIME'
           value: 'dotnet'
+        }
+        {
+          name: 'APPINSIGHTS_INSTRUMENTATIONKEY'
+          value: reference(appSvc_insights.id, appSvc_insights.apiVersion).InstrumentationKey
         }
         {
           name: 'WEBSITE_VNET_ROUTE_ALL'
@@ -566,8 +558,68 @@ resource appSvc_functionApp 'Microsoft.Web/sites@2021-01-01' = {
           value: '168.63.129.16'
         }
         {
-          name: 'APPINSIGHTS_INSTRUMENTATIONKEY'
-          value: reference(appSvc_insights.id, '2014-04-01').InstrumentationKey
+            name: 'AzureWebJobsDashboard'
+            value: 'DefaultEndpointsProtocol=https;AccountName=${saimporter.name};AccountKey=${listKeys(saimporter.id, saimporter.apiVersion).keys[0].value};EndpointSuffix=${environment().suffixes.storage}'
+        }
+        {
+            name: 'AzureWebJobsStorage'
+            value: 'DefaultEndpointsProtocol=https;AccountName=${saimporter.name};AccountKey=${listKeys(saimporter.id, saimporter.apiVersion).keys[0].value};EndpointSuffix=${environment().suffixes.storage}'
+        }
+        {
+            name: 'WEBSITE_CONTENTAZUREFILECONNECTIONSTRING'
+            value: 'DefaultEndpointsProtocol=https;AccountName=${saimporter.name};AccountKey=${listKeys(saimporter.id, saimporter.apiVersion).keys[0].value};EndpointSuffix=${environment().suffixes.storage}'
+        }
+        {
+            name: 'WEBSITE_CONTENTSHARE'
+            value: '${toLower(appSvcFunctionUniqueName)}'
+        }
+        {
+            name: 'WEBSITE_NODE_DEFAULT_VERSION'
+            value: '8.11.1'
+        }
+        {
+            name: 'APPINSIGHTS_PORTALINFO'
+            value: 'ASP.NETCORE'
+        }
+        {
+            name: 'APPINSIGHTS_PROFILERFEATURE_VERSION'
+            value: '1.0.0'
+        }
+        {
+            name: 'APPINSIGHTS_SNAPSHOTFEATURE_VERSION'
+            value: '1.0.0'
+        }
+        {
+            name: 'PROJECT'
+            value: 'src/FhirImporter'
+        }
+        {
+            name: 'ClientId'
+            value: clientId
+        }
+        {
+            name: 'ClientSecret'
+            value: clientSecret
+        }
+        {
+            name: 'Audience'
+            value: audience
+        }
+        {
+            name: 'Authority'
+            value: '${environment().authentication.loginEndpoint}${tenant().tenantId}'
+        }
+        {
+            name: 'FhirServerUrl'
+            value: 'https://${healthcareWksUniqueName}.azurehealthcareapis.com'
+        }
+        {
+            name: 'WEBSITE_MAX_DYNAMIC_APPLICATION_SCALE_OUT'
+            value: '1'
+        }
+        {
+            name: 'MaxDegreeOfParallelism'
+            value: '16'
         }
       ]
       //azureStorageAccounts: {}
@@ -708,12 +760,321 @@ resource vm_script 'Microsoft.Compute/virtualMachines/extensions@2021-07-01' = {
     settings:{
     }
     protectedSettings:{
-      commandToExecute: 'bash deploy.sh "DefaultEndpointsProtocol=https;AccountName=${salake.name};AccountKey=${listKeys(salake.id, salake.apiVersion).keys[0].value};EndpointSuffix=${environment().suffixes.storage}" 120 "./fhir_out" "./out" "./log" "workspace"'
+      commandToExecute: 'bash deploy.sh "DefaultEndpointsProtocol=https;AccountName=${saimporter.name};AccountKey=${listKeys(saimporter.id, saimporter.apiVersion).keys[0].value};EndpointSuffix=${environment().suffixes.storage}" 120 "./fhir_out" "./out" "./log" "fhirimport"'
       fileUris: [
-        'https://raw.githubusercontent.com/jbinko/PythonSyntheaFHIRClient/main/python_client/deploy.sh'
+        'https://raw.githubusercontent.com/djdean/PythonSyntheaFHIRClient/main/deployment/scripts/deploy.sh'
       ]
     }
     autoUpgradeMinorVersion: true
     //enableAutomaticUpgrade: true
+  }
+}
+
+// ----- API FHIR (LEGACY)
+
+resource fhir 'Microsoft.HealthcareApis/services@2021-06-01-preview' = {
+  name: healthcareWksUniqueName
+  location: location
+  tags: resourceTags
+  kind: 'fhir'
+  identity: {
+    type: 'SystemAssigned'
+  }
+  properties: {
+    accessPolicies: []
+    //acrConfiguration: {}
+    authenticationConfiguration: {
+      audience: audience
+      authority: authority
+      smartProxyEnabled: true
+    }
+    //corsConfiguration: {}
+    //cosmosDbConfiguration: {}
+    //exportConfiguration: {}
+    privateEndpointConnections: []
+    //publicNetworkAccess: 'string'
+  }
+}
+
+resource fhir_dataWriterRoleAssignment 'Microsoft.Authorization/roleAssignments@2020-04-01-preview' = {
+  name: guid(fhir.id, 'fhir_dataWriter', deployment().name)
+  scope: fhir
+  properties: {
+    roleDefinitionId: '/providers/Microsoft.Authorization/roleDefinitions/3f88fce4-5892-4214-ae73-ba5294559913' // FHIR Data Writer
+    principalId: objectId
+    principalType: 'ServicePrincipal'
+    canDelegate: false
+    description: 'Read and write FHIR Data.'
+    //condition: 'string'
+    //conditionVersion: '2.0'
+    //delegatedManagedIdentityResourceId
+  }
+}
+
+resource fhir_contributorRoleAssignment 'Microsoft.Authorization/roleAssignments@2020-04-01-preview' = {
+  name: guid(fhir.id, 'fhir_contributor', deployment().name)
+  scope: fhir
+  properties: {
+    roleDefinitionId: '/providers/Microsoft.Authorization/roleDefinitions/5a1fc7df-4bf1-4951-a576-89034ee01acd' // FHIR Data Contributor
+    principalId: objectId
+    principalType: 'ServicePrincipal'
+    canDelegate: false
+    description: 'Full access to FHIR Data.'
+    //condition: 'string'
+    //conditionVersion: '2.0'
+    //delegatedManagedIdentityResourceId
+  }
+}
+
+// ----- FHIR IMPORTER
+
+resource saimporter 'Microsoft.Storage/storageAccounts@2021-08-01' = {
+  name: saUniqueName
+  location: location
+  tags: resourceTags
+  sku: {
+    name: 'Standard_LRS'
+  }
+  kind: 'StorageV2'
+  identity:{
+    type: 'SystemAssigned'
+  }
+  properties: {
+    accessTier: 'Hot'
+    isHnsEnabled: false
+    supportsHttpsTrafficOnly: true
+    allowBlobPublicAccess: false
+    allowSharedKeyAccess: true
+    minimumTlsVersion: 'TLS1_2'
+    // Next lines is needed for web UI access to default storage
+    // ---
+    publicNetworkAccess: 'Enabled'
+    networkAcls: {
+      defaultAction: 'Allow'
+      bypass: 'AzureServices'
+    }
+    // ---
+    encryption:{
+      keySource: 'Microsoft.Storage'
+      services: {
+        file: {
+          enabled: true
+        }
+        blob: {
+           enabled: true
+        }
+      }
+    }
+  }
+}
+
+resource saimporter_blobs 'Microsoft.Storage/storageAccounts/blobServices@2021-08-01' = {
+  name: 'default'
+  parent: saimporter
+  properties: {
+    containerDeleteRetentionPolicy: {
+      enabled: false
+    }
+    cors: {
+      corsRules: []
+    }
+    deleteRetentionPolicy: {
+      enabled: false
+    }
+    isVersioningEnabled: false
+    restorePolicy: {
+      enabled: false
+    }
+  }
+}
+
+resource saimporter_container 'Microsoft.Storage/storageAccounts/blobServices/containers@2021-08-01' = {
+  dependsOn:[
+    saimporter_blobs
+  ]
+  name: '${saimporter.name}/default/fhirimport'
+  properties: {
+    //defaultEncryptionScope: 'string'
+    //denyEncryptionScopeOverride: bool
+    metadata: {}
+    publicAccess: 'None'
+  }
+}
+
+resource saimporter_container2 'Microsoft.Storage/storageAccounts/blobServices/containers@2021-08-01' = {
+  dependsOn:[
+    saimporter_blobs
+  ]
+  name: '${saimporter.name}/default/fhirrejected'
+  properties: {
+    //defaultEncryptionScope: 'string'
+    //denyEncryptionScopeOverride: bool
+    metadata: {}
+    publicAccess: 'None'
+  }
+}
+
+resource appSvc_src 'Microsoft.Web/sites/sourcecontrols@2021-03-01' = {
+  dependsOn:[
+    vm_script
+  ]
+  name: 'web'
+  //kind: 'string'
+  parent: appSvc_functionApp
+  properties: {
+    repoUrl: 'https://github.com/Microsoft/fhir-server-samples'
+    branch: 'master'
+    isManualIntegration: true
+  }
+}
+
+// ----- FHIR SYNAPSE
+
+resource appSvc_functionApp2 'Microsoft.Web/sites@2021-01-01' = {
+  dependsOn:[
+    appSvcPlan
+  ]
+  name: appSvcFunctionUniqueName2
+  kind: 'functionapp'
+  location: location
+  tags: resourceTags
+  properties: {
+    enabled: true
+    serverFarmId: appSvcPlanUniqueName
+    siteConfig: {
+      requestTracingEnabled: true
+      remoteDebuggingEnabled: false
+      httpLoggingEnabled: true
+      //logsDirectorySizeLimit: int
+      detailedErrorLoggingEnabled: true
+      //publishingUsername: 'string'
+      appSettings: [
+        {
+          name: 'FUNCTIONS_EXTENSION_VERSION'
+          value: '~2'
+        }
+        {
+          name: 'WEBSITE_NODE_DEFAULT_VERSION'
+          value: '~10'
+        }
+        {
+          name: 'FUNCTIONS_WORKER_RUNTIME'
+          value: 'dotnet-isolated'
+        }
+        {
+          name: 'APPINSIGHTS_INSTRUMENTATIONKEY'
+          value: reference(appSvc_insights.id, appSvc_insights.apiVersion).InstrumentationKey
+        }
+        {
+          name: 'WEBSITE_VNET_ROUTE_ALL'
+          value: '1'
+        }
+        {
+          name: 'WEBSITE_DNS_SERVER'
+          value: '168.63.129.16'
+        }
+        {
+            name: 'AzureWebJobsDashboard'
+            value: 'DefaultEndpointsProtocol=https;AccountName=${saimporter.name};AccountKey=${listKeys(saimporter.id, saimporter.apiVersion).keys[0].value};EndpointSuffix=${environment().suffixes.storage}'
+        }
+        {
+            name: 'AzureWebJobsStorage'
+            value: 'DefaultEndpointsProtocol=https;AccountName=${saimporter.name};AccountKey=${listKeys(saimporter.id, saimporter.apiVersion).keys[0].value};EndpointSuffix=${environment().suffixes.storage}'
+        }
+        {
+            name: 'WEBSITE_CONTENTAZUREFILECONNECTIONSTRING'
+            value: 'DefaultEndpointsProtocol=https;AccountName=${saimporter.name};AccountKey=${listKeys(saimporter.id, saimporter.apiVersion).keys[0].value};EndpointSuffix=${environment().suffixes.storage}'
+        }
+        {
+            name: 'WEBSITE_CONTENTSHARE'
+            value: '${toLower(appSvcFunctionUniqueName2)}'
+        }
+        {
+            name: 'APPINSIGHTS_PORTALINFO'
+            value: 'ASP.NETCORE'
+        }
+        {
+            name: 'APPINSIGHTS_PROFILERFEATURE_VERSION'
+            value: '1.0.0'
+        }
+        {
+            name: 'APPINSIGHTS_SNAPSHOTFEATURE_VERSION'
+            value: '1.0.0'
+        }
+        {
+          name: 'job__containerName'
+          value: 'fhir'
+        }
+        {
+          name: 'job__startTime'
+          value: '1970-01-01 00:00:00 +00:00'
+        }
+        {
+          name: 'job__endTime'
+          value: json('null')
+        }
+        {
+          name: 'dataLakeStore__storageUrl'
+          value: salake.properties.primaryEndpoints.dfs
+        }
+        {
+          name: 'fhirServer__serverUrl'
+          value: 'https://${healthcareWksUniqueName}.azurehealthcareapis.com'
+        }
+        {
+          name: 'fhirServer__version'
+          value: 'R4'
+        }
+        {
+          name: 'fhirServer__authentication'
+          value: 'ManagedIdentity'
+        }
+        {
+            name: 'WEBSITE_MAX_DYNAMIC_APPLICATION_SCALE_OUT'
+            value: '1'
+        }
+      ]
+      //azureStorageAccounts: {}
+      connectionStrings: [
+      ]
+      alwaysOn: true
+      //tracingOptions: 'string'
+      http20Enabled: true
+      minTlsVersion: '1.2'
+      scmMinTlsVersion: '1.2'
+      ftpsState: 'Disabled'
+      preWarmedInstanceCount: 1
+    }
+    httpsOnly: true
+    storageAccountRequired: false
+  }
+  identity: {
+    type: 'SystemAssigned'
+  }
+}
+
+resource appSvc_functionApp2_msdeploy 'Microsoft.Web/sites/extensions@2021-02-01' = {
+  name: 'MSDeploy'
+  parent: appSvc_functionApp2
+  properties: {
+    packageUri: 'https://fhiranalyticspipeline.blob.${environment().suffixes.storage}/builds/Microsoft.Health.Fhir.Synapse.FunctionApp.zip'
+  }
+}
+
+resource salake_blobContributorRoleAssignment2 'Microsoft.Authorization/roleAssignments@2020-04-01-preview' = {
+  dependsOn:[
+    salake_container
+  ]
+  name: guid(salake.id, deployment().name, 'salake_blobContributorRoleAssignment2')
+  scope: salake
+  properties: {
+    roleDefinitionId: '/providers/Microsoft.Authorization/roleDefinitions/ba92f5b4-2d11-453d-a403-e96b0029c9fe' // Storage Blob Data Contributor
+    principalId: appSvc_functionApp2.identity.principalId
+    principalType: 'ServicePrincipal'
+    canDelegate: false
+    description: 'Read, write, and delete Azure Storage containers and blobs.'
+    //condition: 'string'
+    //conditionVersion: '2.0'
+    //delegatedManagedIdentityResourceId
   }
 }

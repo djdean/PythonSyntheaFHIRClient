@@ -1,9 +1,22 @@
 # Installation Guide
-An overview of the soltuion is below:<br /><br />
-# SCREENSHOT GOES HERE 
-There are two ways to install and configure the application: automated or manual. Only Ubuntu 20.04 is supported at this time.
+An overview of the soltuion is below. There are two ways to install and configure the application: automated or manual. Only Ubuntu 20.04 is supported at this time.
 # Automated Configuration and Deployment
-A screenshot of the automated deployment page is shown below. There are several variables that need to be set in order to allow Azure to deploy and configure the application:<br /><br />
+
+
+1) Go to the Azure Portal <https://portal.azure.com/>, and click Azure Cloud Shell (First Icon next to the search box on the top).
+If this is the first time you are using Azure Cloud Shell you might be asked to configure storage for this. Follow the configuration wizard.
+2) **Clone the repository:** Next step is to clone this repository using the following command: `git clone https://github.com/djdean/PythonSyntheaFHIRClient.git`
+3) `cd ./PythonSyntheaFHIRClient/IaC/`
+4) Last step is to provision Infrastructure through the Bicep template. Provisioning needs to be initiated through the commands:
+
+```
+az group create --name MyResourceGroupName --location MyLocation --subscription MySubscriptionId
+
+az deployment group create --resource-group MyResourceGroupName --template-file Synthea.bicep --parameters projectPrefix=specifyPrefix sqlServerLogin=specifySqlLogin sqlServerPassword=specifySqlPwd localAdminUserName='specifyVMLogin' localAdminPassword='specifyVMPwd' clientId='specifyClientId' objectId='specifyObjectId' clientSecret='specifyClientSecret' --subscription MySubscriptionId
+```
+
+Make sure you select good unique name for 'projectPrefix' to avoid name collisions for global names for Azure global resources. Select strong user name and password for SQL and VM credentials and provide information about SPN and its credentials. See previous section how to create SPN.
+
 # Manual Configuration and Deployment
 If manual configuration is needed, there are several steps which need to be followed in order to deploy the application. This guide assumes the following services have been configured and deployed already:<br/><br/> 1) *Azure Storage Account* <br/> 2) *[FHIR Importer App](https://github.com/microsoft/fhir-server-samples/tree/master/src/FhirImporter)*<br /> 3) *[FHIR to Synapse Sync Agent](https://github.com/microsoft/FHIR-Analytics-Pipelines/blob/main/FhirToDataLake/docs/Deployment.md)*<br /> 4) *Azure API for FHIR* <BR/> 5) *Azure Synapse Analytics* <Br/><Br/> Once all services have been deployed in the portal, run the following steps to finish the deployment of the solution:<br/>
 1) **Clone the repository:** The first step is to clone this repository using the following command:<br /><br/>`git clone https://github.com/djdean/PythonSyntheaFHIRClient.git` <br /><br />

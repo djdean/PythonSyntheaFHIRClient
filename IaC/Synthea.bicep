@@ -1042,6 +1042,7 @@ resource appSvc_functionApp2 'Microsoft.Web/sites@2021-01-01' = {
       http20Enabled: true
       minTlsVersion: '1.2'
       scmMinTlsVersion: '1.2'
+      use32BitWorkerProcess: false
       ftpsState: 'Disabled'
       preWarmedInstanceCount: 1
     }

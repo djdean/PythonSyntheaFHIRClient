@@ -760,7 +760,7 @@ resource vm_script 'Microsoft.Compute/virtualMachines/extensions@2021-07-01' = {
     settings:{
     }
     protectedSettings:{
-      commandToExecute: 'bash deploy.sh "DefaultEndpointsProtocol=https;AccountName=${saimporter.name};AccountKey=${listKeys(saimporter.id, saimporter.apiVersion).keys[0].value};EndpointSuffix=${environment().suffixes.storage}" 120 "fhir_out" "out" "log" "fhirimport"'
+      commandToExecute: 'bash deploy.sh "DefaultEndpointsProtocol=https;AccountName=${saimporter.name};AccountKey=${listKeys(saimporter.id, saimporter.apiVersion).keys[0].value};EndpointSuffix=${environment().suffixes.storage}" 120 "/home/synthea/synthea/output/fhir" "out" "log" "fhirimport"'
       fileUris: [
         'https://raw.githubusercontent.com/djdean/PythonSyntheaFHIRClient/main/deployment/scripts/deploy.sh'
       ]

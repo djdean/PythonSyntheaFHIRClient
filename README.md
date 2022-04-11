@@ -13,7 +13,7 @@ The very first step is to create Service Account / Service Principal Name (SPN) 
 ```
 az group create --name MyResourceGroupName --location MyLocation --subscription MySubscriptionId
 
-az ad sp create-for-rbac --name MySPNName --role 'Contributor' --scopes /subscriptions/MySubscriptionId/resourceGroups/MyResourceGroupName --years 1 --subscription MySubscriptionId
+az ad sp create-for-rbac --name MySPNName --role 'Contributor' --scopes /subscriptions/MySubscriptionId/resourceGroups/MyResourceGroupName --years 1
 ```
 
 After creation, you need to collect the information about SPN and credentials. You can see secret value as the output of the command. Copy and note the secret. You also need ClientId and ObjectId. For that, search in Azure Portal in search box 'Azure Active Directory', select it, click 'App Registrations', 'Owned Applications', search for the name of application you just created, click the application and click through the 'Managed application in local directory'.

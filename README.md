@@ -4,9 +4,8 @@ An overview of the soltuion is below. There are two ways to install and configur
 
 1) Go to the Azure Portal <https://portal.azure.com/>, and click Azure Cloud Shell (First Icon next to the search box on the top).
 If this is the first time you are using Azure Cloud Shell you might be asked to configure storage for this. Follow the configuration wizard.
-2) **Clone the repository:** Next step is to clone this repository using the following command: 
-    `git clone https://github.com/djdean/PythonSyntheaFHIRClient.git`
-4) `cd ./PythonSyntheaFHIRClient/IaC/`
+2) **Clone the repository:** Next step is to clone this repository using the following command: <br/>`git clone https://github.com/djdean/PythonSyntheaFHIRClient.git`<br/>
+4) Change directories to the deployment directory: <br/>`cd ./PythonSyntheaFHIRClient/IaC/`<br/>
 5) Last step is to provision Infrastructure through the Bicep template. Provisioning needs to be initiated through the following commands.
 
 The very first step is to create Service Account / Service Principal Name (SPN) for the application with the least privilege approach. You can specify 'Contributor' role at the resource group level but recommendation is to specify even lower permissions as needed.

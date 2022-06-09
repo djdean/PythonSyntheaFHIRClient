@@ -88,10 +88,9 @@ var vmSize = 'Standard_D2_v3'
 var vmPIPName = '${lowerProjectPrefix}syntheavmpip'
 
 var healthcareWksUniqueName = '${lowerProjectPrefix}syntheahcapi'
-var fhirName = '${lowerProjectPrefix}fhir'
 var loginURL = environment().authentication.loginEndpoint
 var authority = '${loginURL}${tenant().tenantId}'
-var audience = 'https://${healthcareWksUniqueName}-${fhirName}.fhir.azurehealthcareapis.com'
+var audience = 'https://${healthcareWksUniqueName}.azurehealthcareapis.com'
 
 // ----- PRIVATE LINK
 
@@ -571,7 +570,7 @@ resource appSvc_functionApp 'Microsoft.Web/sites@2021-01-01' = {
         }
         {
             name: 'WEBSITE_CONTENTSHARE'
-            value: '${toLower(appSvcFunctionUniqueName)}'
+            value: toLower(appSvcFunctionUniqueName)
         }
         {
             name: 'WEBSITE_NODE_DEFAULT_VERSION'
@@ -760,7 +759,7 @@ resource vm_script 'Microsoft.Compute/virtualMachines/extensions@2021-07-01' = {
     settings:{
     }
     protectedSettings:{
-      commandToExecute: 'bash deploy.sh "DefaultEndpointsProtocol=https;AccountName=${saimporter.name};AccountKey=${listKeys(saimporter.id, saimporter.apiVersion).keys[0].value};EndpointSuffix=${environment().suffixes.storage}" 120 "./fhir_out" "./out" "./log" "fhirimport"'
+      commandToExecute: 'bash deploy.sh "DefaultEndpointsProtocol=https;AccountName=${saimporter.name};AccountKey=${listKeys(saimporter.id, saimporter.apiVersion).keys[0].value};EndpointSuffix=${environment().suffixes.storage}" 120 "/home/synthea/synthea/output/fhir" "out" "log" "fhirimport"'
       fileUris: [
         'https://raw.githubusercontent.com/djdean/PythonSyntheaFHIRClient/main/deployment/scripts/deploy.sh'
       ]
@@ -776,7 +775,7 @@ resource fhir 'Microsoft.HealthcareApis/services@2021-06-01-preview' = {
   name: healthcareWksUniqueName
   location: location
   tags: resourceTags
-  kind: 'fhir'
+  kind: 'fhir-R4'
   identity: {
     type: 'SystemAssigned'
   }
@@ -987,7 +986,7 @@ resource appSvc_functionApp2 'Microsoft.Web/sites@2021-01-01' = {
         }
         {
             name: 'WEBSITE_CONTENTSHARE'
-            value: '${toLower(appSvcFunctionUniqueName2)}'
+            value: toLower(appSvcFunctionUniqueName2)
         }
         {
             name: 'APPINSIGHTS_PORTALINFO'
@@ -1015,7 +1014,7 @@ resource appSvc_functionApp2 'Microsoft.Web/sites@2021-01-01' = {
         }
         {
           name: 'dataLakeStore__storageUrl'
-          value: salake.properties.primaryEndpoints.dfs
+          value: saimporter.properties.primaryEndpoints.blob
         }
         {
           name: 'fhirServer__serverUrl'
@@ -1042,6 +1041,7 @@ resource appSvc_functionApp2 'Microsoft.Web/sites@2021-01-01' = {
       http20Enabled: true
       minTlsVersion: '1.2'
       scmMinTlsVersion: '1.2'
+      use32BitWorkerProcess: false
       ftpsState: 'Disabled'
       preWarmedInstanceCount: 1
     }
@@ -1061,18 +1061,63 @@ resource appSvc_functionApp2_msdeploy 'Microsoft.Web/sites/extensions@2021-02-01
   }
 }
 
-resource salake_blobContributorRoleAssignment2 'Microsoft.Authorization/roleAssignments@2020-04-01-preview' = {
+resource saimporter_blobContributorRoleAssignment2 'Microsoft.Authorization/roleAssignments@2020-04-01-preview' = {
   dependsOn:[
-    salake_container
+    saimporter_container
   ]
-  name: guid(salake.id, deployment().name, 'salake_blobContributorRoleAssignment2')
-  scope: salake
+  name: guid(saimporter.id, deployment().name, 'saimporter_blobContributorRoleAssignment2')
+  scope: saimporter
   properties: {
     roleDefinitionId: '/providers/Microsoft.Authorization/roleDefinitions/ba92f5b4-2d11-453d-a403-e96b0029c9fe' // Storage Blob Data Contributor
     principalId: appSvc_functionApp2.identity.principalId
     principalType: 'ServicePrincipal'
     canDelegate: false
     description: 'Read, write, and delete Azure Storage containers and blobs.'
+    //condition: 'string'
+    //conditionVersion: '2.0'
+    //delegatedManagedIdentityResourceId
+  }
+}
+
+resource fhir_dataWriterRoleAssignment2 'Microsoft.Authorization/roleAssignments@2020-04-01-preview' = {
+  name: guid(fhir.id, 'fhir_dataWriter2', deployment().name)
+  scope: fhir
+  properties: {
+    roleDefinitionId: '/providers/Microsoft.Authorization/roleDefinitions/3f88fce4-5892-4214-ae73-ba5294559913' // FHIR Data Writer
+    principalId: appSvc_functionApp2.identity.principalId
+    principalType: 'ServicePrincipal'
+    canDelegate: false
+    description: 'Read and write FHIR Data.'
+    //condition: 'string'
+    //conditionVersion: '2.0'
+    //delegatedManagedIdentityResourceId
+  }
+}
+
+resource fhir_contributorRoleAssignment2 'Microsoft.Authorization/roleAssignments@2020-04-01-preview' = {
+  name: guid(fhir.id, 'fhir_contributor2', deployment().name)
+  scope: fhir
+  properties: {
+    roleDefinitionId: '/providers/Microsoft.Authorization/roleDefinitions/5a1fc7df-4bf1-4951-a576-89034ee01acd' // FHIR Data Contributor
+    principalId: appSvc_functionApp2.identity.principalId
+    principalType: 'ServicePrincipal'
+    canDelegate: false
+    description: 'Full access to FHIR Data.'
+    //condition: 'string'
+    //conditionVersion: '2.0'
+    //delegatedManagedIdentityResourceId
+  }
+}
+
+resource fhir_dataReaderRoleAssignment2 'Microsoft.Authorization/roleAssignments@2020-04-01-preview' = {
+  name: guid(fhir.id, 'fhir_dataReader2', deployment().name)
+  scope: fhir
+  properties: {
+    roleDefinitionId: '/providers/Microsoft.Authorization/roleDefinitions/4c8d0bbc-75d3-4935-991f-5f3c56d81508' // FHIR Data Reader
+    principalId: appSvc_functionApp2.identity.principalId
+    principalType: 'ServicePrincipal'
+    canDelegate: false
+    description: 'Read FHIR resources (includes searching and versioned history).'
     //condition: 'string'
     //conditionVersion: '2.0'
     //delegatedManagedIdentityResourceId

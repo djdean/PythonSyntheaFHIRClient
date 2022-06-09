@@ -71,9 +71,9 @@ class FHIRUploader:
 		output_error_path = target_path+"/error"
 		error_exists = os.path.exists(output_error_path)
 		if not uploaded_exists:
-			os.mkdir(output_upload_path)
+			os.makedirs(output_upload_path)
 		if not error_exists:
-			os.mkdir(output_error_path)
+			os.makedirs(output_error_path)
 		for uploaded_file in uploaded_files:
 			shutil.move(uploaded_file,output_upload_path)
 		for error_file in error_files:

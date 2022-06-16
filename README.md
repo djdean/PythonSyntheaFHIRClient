@@ -1,5 +1,5 @@
 # Installation Guide
-An overview of the soltuion is below. There are two ways to install and configure the application: automated or manual. Only Ubuntu 20.04 is supported at this time.
+An overview of the soltuion is below.![alt_text](https://github.com/djdean/PythonSyntheaFHIRClient/blob/79178b708fb342247cda782bce1e3a8ef9514e19/OverviewFHIRIngest.png) <br/> There are two ways to install and configure the application: automated or manual. Only Ubuntu 20.04 is supported at this time.
 # Automated Configuration and Deployment
 
 1) Go to the Azure Portal <https://portal.azure.com/>, and click Azure Cloud Shell (First Icon next to the search box on the top).
